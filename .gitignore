@@ -1,0 +1,37 @@
+# Fichiers de configuration sensibles
+Test.py
+
+# Fichiers Excel générés
+*.xlsx
+
+# Cache Python
+__pycache__/
+*.py[cod]
+
+# Environnements virtuels (si présents)
+venv/
+.env/
+
+# Fichiers logs
+*.log
+
+# Fichiers temporaires de l'éditeur
+*.swp
+*.swo
+.DS_Store
+
+# IDEs (exemple PyCharm)
+.idea/
+
+# Fichier Json
+*.Json
+
+# Fichiers de configuration d'environnement
+*.env
+
+# Dossier Qt
+Qt_ui/
+
+# Dossier Maquette
+
+Maquette/
