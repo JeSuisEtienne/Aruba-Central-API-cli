@@ -15,11 +15,22 @@ from pycentral.classic.base import ArubaCentralBase
 from script_inventaire import recuperer_inventaire
 from script_firmware_switch import get_firmware_switch
 from script_firmware_swarms import get_firmware_swarms
-from script_firmware_versions import get_firmware_versions, max_version_same_branch
+from script_firmware_versions import get_firmware_versions, max_version_same_branch, max_version_same_branch_gateway
 from script_list_switches import lister_switches_stack
+from script_list_gateways import lister_gateways, enrichir_gateways_recommended
 
 
 DataFramesMap = Dict[str, pd.DataFrame]
+
+CONSOLIDE_COLONNES = [
+    "serial",
+    "mac_address",
+    "hostname",
+    "model",
+    "firmware_version",
+    "recommended",
+    "firmware_max",
+]
 
 
 def _concat_frames(frames: List[pd.DataFrame]) -> pd.DataFrame:
@@ -119,6 +130,66 @@ def _calculer_firmware_max_swarms(
     return df_vc, df_aps, df_vc_versions
 
 
+def _calculer_firmware_max_gateways(
+    df_gateways: pd.DataFrame,
+    base_url: str,
+) -> pd.DataFrame:
+    """
+    Ajoute firmware_max pour les gateways en restant dans la même branche.
+    """
+    if df_gateways is None or df_gateways.empty:
+        return df_gateways
+
+    # S'assurer que la colonne firmware_version existe
+    if "firmware_version" not in df_gateways.columns:
+        df_gateways["firmware_version"] = None
+
+    versions_gw: Optional[List[str]] = None
+    try:
+        # Les gateways sont exposés sous le type "CONTROLLER".
+        versions_gw = get_firmware_versions(device_type="CONTROLLER", base_url=base_url)
+    except Exception as err:  # pragma: no cover - log utilisateur
+        print("⚠️ Impossible de récupérer les versions Gateway :", err)
+
+    if versions_gw:
+        def calculer_max(current: Optional[str]) -> Optional[str]:
+            if not current or pd.isna(current):
+                return None
+            # Utiliser la fonction spécialisée pour les gateways qui gère le format "8.7.0.0-2.3.0.9_85196"
+            return max_version_same_branch_gateway(str(current), versions_gw)
+
+        df_gateways["firmware_max"] = df_gateways["firmware_version"].apply(calculer_max)
+    else:
+        print("⚠️ Aucune version CONTROLLER disponible, firmware_max sera vide")
+        df_gateways["firmware_max"] = None
+
+    # S'assurer que la colonne firmware_max existe même si elle n'a pas été créée
+    if "firmware_max" not in df_gateways.columns:
+        df_gateways["firmware_max"] = None
+
+    return df_gateways
+
+
+def _preparer_gateways_consolide(df_gateways: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aligne les colonnes des gateways sur la vue consolidée firmware.
+    """
+    if df_gateways is None or df_gateways.empty:
+        return pd.DataFrame(columns=CONSOLIDE_COLONNES)
+
+    df = df_gateways.rename(columns={"macaddr": "mac_address", "name": "hostname"}).copy()
+
+    # S'assurer que toutes les colonnes requises existent
+    for col in CONSOLIDE_COLONNES:
+        if col not in df.columns:
+            df[col] = None
+
+    # Sélectionner uniquement les colonnes consolidées (firmware_max devrait être préservé)
+    df_result = df[CONSOLIDE_COLONNES].copy()
+
+    return df_result
+
+
 def collect_datasets(central: ArubaCentralBase, base_url: str) -> DataFramesMap:
     """
     Collecte l'ensemble des jeux de données nécessaires au rapport.
@@ -130,6 +201,9 @@ def collect_datasets(central: ArubaCentralBase, base_url: str) -> DataFramesMap:
     """
     df_inventory = recuperer_inventaire(conn=central)
     df_switches_stack = lister_switches_stack(base_url=base_url)
+    df_gateways = lister_gateways(base_url=base_url)
+    df_gateways = enrichir_gateways_recommended(df_gateways, base_url=base_url)
+    df_gateways = _calculer_firmware_max_gateways(df_gateways, base_url=base_url)
 
     df_switch_hp = get_firmware_switch(
         conn=central,
@@ -154,24 +228,18 @@ def collect_datasets(central: ArubaCentralBase, base_url: str) -> DataFramesMap:
         base_url=base_url,
     )
 
-    colonnes_cibles = [
-        "serial",
-        "mac_address",
-        "hostname",
-        "model",
-        "firmware_version",
-        "recommended",
-        "firmware_max",
-    ]
-    # Consolidation : uniquement switches et VC (pas les APs individuels)
+    df_gateways_consolide = _preparer_gateways_consolide(df_gateways)
+
+    # Consolidation : switches, VC et gateways (pas les APs individuels)
     df_consolide = _concat_frames(
         [
-            df_switch.reindex(columns=colonnes_cibles, copy=False)
+            df_switch.reindex(columns=CONSOLIDE_COLONNES, copy=False)
             if not df_switch.empty
             else None,
-            df_swarms_vc.reindex(columns=colonnes_cibles, copy=False)
+            df_swarms_vc.reindex(columns=CONSOLIDE_COLONNES, copy=False)
             if not df_swarms_vc.empty
             else None,
+            df_gateways_consolide if not df_gateways_consolide.empty else None,
         ]
     )
 
@@ -190,6 +258,7 @@ def collect_datasets(central: ArubaCentralBase, base_url: str) -> DataFramesMap:
     return {
         "inventaire": df_inventory,
         "switches_stack": df_switches_stack,
+        "gateways": df_gateways,
         "firmware_switch": df_switch,
         "firmware_swarms": df_swarms_sheet,
         "firmware_consolide": df_consolide,

@@ -94,7 +94,7 @@ Le script vous demandera de sélectionner un client parmi ceux disponibles dans 
 Le script génère un rapport Excel avec les feuilles suivantes :
 
 1. **Firmware Consolidé** (première feuille)
-   - Vue unifiée des switches et Virtual Controllers (VC)
+   - Vue unifiée des switches, Virtual Controllers (VC) et gateways
    - Colonnes : serial, mac_address, hostname, model, firmware_version, recommended, firmware_max
 
 2. **Inventaire**
@@ -118,6 +118,7 @@ Le script calcule automatiquement la version maximale disponible (`firmware_max`
 - **IAP** : Reste dans la même branche majeure/mineure (ex: 8.13.x.x pour 8.13.0.0)
 - **Switches 2930F** : Versions HP disponibles
 - **Switches 6300** : Versions CX disponibles
+- **Gateways** : Recherche des versions disponibles (type `CONTROLLER`) et sélection de la plus haute dans la même branche
 
 ### Structure du projet
 

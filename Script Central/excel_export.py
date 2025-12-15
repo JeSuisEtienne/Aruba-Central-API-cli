@@ -43,6 +43,7 @@ def export_to_excel(fichier_excel: str, dataframes: Dict[str, pd.DataFrame]) -> 
         ("firmware_consolide", "Firmware Consolidé"),
         ("inventaire", "Inventaire"),
         ("switches_stack", "Switches (Stack)"),
+        ("gateways", "Gateways"),
         ("firmware_switch", "Firmware Switch"),
         ("firmware_swarms", "Firmware Swarms"),
     )
