@@ -108,7 +108,12 @@ Le script génère un rapport Excel avec les feuilles suivantes :
    - Détails des switches (HP et CX)
    - Calcul automatique de `firmware_max` pour les modèles 2930F (HP) et 6300 (CX)
 
-4. **Firmware Swarms**
+4. **Gateways**
+   - Liste des gateways avec leurs informations détaillées
+   - Récupération de la version recommandée via l'endpoint `/monitoring/v1/gateways/{serial}`
+   - Calcul automatique de `firmware_max` pour les gateways dans la même branche de version
+
+5. **Firmware Swarms**
    - Virtual Controllers (VC) et tous les points d'accès associés
    - Calcul automatique de `firmware_max` pour les IAP dans la même branche de version
 
@@ -118,7 +123,10 @@ Le script calcule automatiquement la version maximale disponible (`firmware_max`
 - **IAP** : Reste dans la même branche majeure/mineure (ex: 8.13.x.x pour 8.13.0.0)
 - **Switches 2930F** : Versions HP disponibles
 - **Switches 6300** : Versions CX disponibles
-- **Gateways** : Recherche des versions disponibles (type `CONTROLLER`) et sélection de la plus haute dans la même branche
+- **Gateways** : 
+  - Recherche des versions disponibles (type `CONTROLLER`) et sélection de la plus haute dans la même branche
+  - Gestion du format spécial des versions gateway (ex: `8.7.0.0-2.3.0.9`) en comparant la partie principale et la partie secondaire
+  - Récupération de la version recommandée depuis l'API pour chaque gateway individuellement
 
 ### Structure du projet
 
@@ -144,6 +152,7 @@ Aruba-Central-API-Report/
 │   ├── script_firmware_swarms.py    # Firmware des swarms (VC + APs)
 │   ├── script_firmware_versions.py # Récupération des versions disponibles
 │   ├── script_list_switches.py      # Liste des switches (stack/standalone)
+│   ├── script_list_gateways.py      # Liste des gateways et récupération des versions recommandées
 │   ├── script_load_token.py         # Chargement des tokens
 │   └── excel_format.py              # Formatage Excel
 └── README.md
