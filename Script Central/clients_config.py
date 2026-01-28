@@ -2,8 +2,10 @@
 Définition dynamique de la liste des clients à partir du dossier `.env`.
 
 Chaque fichier `.env` représente un client et doit contenir les variables :
-    CLIENT_ID, CLIENT_SECRET, CUSTOMER_ID,
-    CENTRAL_USERNAME, CENTRAL_PASSWORD, BASE_URL
+    CLIENT_ID, CLIENT_SECRET, CUSTOMER_ID, BASE_URL
+
+Les identifiants (CENTRAL_USERNAME, CENTRAL_PASSWORD) sont chargés depuis
+le fichier auth.env à la racine de Script Central/.
 
 Le nom du client affiché dans le script correspond au nom du fichier sans l'extension `.env`.
 """

@@ -6,7 +6,7 @@ des équipements gérés et les retourne sous forme de DataFrame pandas.
 """
 
 import pandas as pd
-from pycentral.classic.device_inventory import Inventory
+from pycentral.device_inventory import Inventory
 
 
 def recuperer_inventaire(conn, limit=310):

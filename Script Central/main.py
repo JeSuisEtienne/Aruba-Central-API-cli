@@ -8,7 +8,7 @@ et de firmware des équipements, puis les exporte dans un fichier Excel formaté
 import os
 from typing import List
 
-from pycentral.classic.base import ArubaCentralBase
+from pycentral.base import ArubaCentralBase
 
 from central_config import charger_central_info, lister_clients
 from data_pipeline import collect_datasets

@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
-from pycentral.classic.base import ArubaCentralBase
+from pycentral.base import ArubaCentralBase
 
 from script_inventaire import recuperer_inventaire
 from script_firmware_switch import get_firmware_switch
@@ -244,6 +244,14 @@ def collect_datasets(central: ArubaCentralBase, base_url: str) -> DataFramesMap:
     )
 
     # Prépare un tableau combinant VC et AP pour l'onglet Firmware Swarms
+    # Ajouter les colonnes "site" et "ip_address" aux VC (vides pour les VC)
+    if not df_swarms_vc.empty:
+        df_swarms_vc = df_swarms_vc.copy()
+        if "site" not in df_swarms_vc.columns:
+            df_swarms_vc["site"] = None
+        if "ip_address" not in df_swarms_vc.columns:
+            df_swarms_vc["ip_address"] = None
+    
     df_swarms_sheet = _concat_frames(
         [
             df_swarms_vc.assign(type_entree="VC") if not df_swarms_vc.empty else None,
@@ -251,9 +259,25 @@ def collect_datasets(central: ArubaCentralBase, base_url: str) -> DataFramesMap:
         ]
     )
     if not df_swarms_sheet.empty:
-        # Place type_entree en première colonne pour la lisibilité
-        cols = ["type_entree"] + [col for col in df_swarms_sheet.columns if col != "type_entree"]
-        df_swarms_sheet = df_swarms_sheet[cols]
+        # Définir l'ordre des colonnes avec site entre model et vc_name, et ip_address après vc_name
+        colonnes_ordre = [
+            "type_entree",
+            "serial",
+            "mac_address",
+            "hostname",
+            "model",
+            "site",
+            "vc_name",
+            "ip_address",
+            "vc_id",
+        ]
+        # Ajouter les autres colonnes qui ne sont pas dans la liste
+        autres_colonnes = [col for col in df_swarms_sheet.columns if col not in colonnes_ordre]
+        colonnes_finales = colonnes_ordre + autres_colonnes
+        
+        # Réorganiser uniquement les colonnes qui existent dans le DataFrame
+        colonnes_existantes = [col for col in colonnes_finales if col in df_swarms_sheet.columns]
+        df_swarms_sheet = df_swarms_sheet[colonnes_existantes]
 
     return {
         "inventaire": df_inventory,

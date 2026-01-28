@@ -34,15 +34,13 @@ EMAIL_SUBJECT=Rapport mensuel Aruba Central - {nom_client}
 
 ## Exemple de configuration complète
 
-Voici un exemple de fichier `.env` complet avec la configuration email :
+Voici un exemple de fichier `.env` complet pour un client avec la configuration email :
 
 ```env
 # Configuration Aruba Central
 CLIENT_ID=votre_client_id
 CLIENT_SECRET=votre_client_secret
 CUSTOMER_ID=votre_customer_id
-CENTRAL_USERNAME=votre_username
-CENTRAL_PASSWORD=votre_password
 BASE_URL=https://apigw-eucentral3.central.arubanetworks.com
 
 # Configuration Email
@@ -55,6 +53,8 @@ EMAIL_TO=destinataire@example.com
 EMAIL_CC=manager@example.com
 EMAIL_SUBJECT=Rapport Aruba Central - {nom_client}
 ```
+
+**Note** : Les identifiants Aruba Central (`CENTRAL_USERNAME` et `CENTRAL_PASSWORD`) sont configurés dans le fichier `auth.env` à la racine de `Script Central/`, pas dans les fichiers clients.
 
 ## Configuration pour différents fournisseurs email
 
@@ -103,7 +103,7 @@ EMAIL_FROM=noreply@votre-domaine.com
 ⚠️ **Important** : Les fichiers `.env` contiennent des informations sensibles (mots de passe, clés API). 
 
 - Ne commitez **jamais** ces fichiers dans un dépôt Git
-- Assurez-vous que le fichier `.gitignore` exclut le dossier `.env/`
+- Assurez-vous que le fichier `.gitignore` exclut le fichier `auth.env` et le dossier `.env/`
 - Utilisez des mots de passe d'application plutôt que des mots de passe principaux quand c'est possible
 
 ## Test
