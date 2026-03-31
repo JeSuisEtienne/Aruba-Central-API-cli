@@ -3,6 +3,8 @@
 Outil Python de génération de rapports Excel depuis l'API Aruba Central.
 Collecte l'inventaire des équipements réseau, le statut firmware des switches, gateways et points d'accès, avec calcul automatique des versions maximales disponibles par branche. Supporte une architecture multi-clients avec configurations et tokens isolés.
 
+Disponible en **deux modes** : interface web Streamlit (`app.py`) ou scripts en ligne de commande (`main.py` / `main_mrt.py`).
+
 ---
 
 ## Table des matières
@@ -11,23 +13,25 @@ Collecte l'inventaire des équipements réseau, le statut firmware des switches,
 2. [Prérequis](#prérequis)
 3. [Installation](#installation)
 4. [Configuration](#configuration)
-5. [Utilisation](#utilisation)
-6. [Rapports générés](#rapports-générés)
-7. [Rapports MRT](#rapports-mrt)
-8. [Structure du projet](#structure-du-projet)
-9. [Architecture technique](#architecture-technique)
-10. [Bonnes pratiques](#bonnes-pratiques)
-11. [Dépannage](#dépannage)
+5. [Interface web Streamlit](#interface-web-streamlit)
+6. [Utilisation en ligne de commande](#utilisation-en-ligne-de-commande)
+7. [Rapports générés](#rapports-générés)
+8. [Rapports MRT](#rapports-mrt)
+9. [Structure du projet](#structure-du-projet)
+10. [Architecture technique](#architecture-technique)
+11. [Bonnes pratiques](#bonnes-pratiques)
+12. [Dépannage](#dépannage)
 
 ---
 
 ## Fonctionnalités
 
+- **Interface web Streamlit** : application multi-pages avec sélection de client, génération en temps réel, aperçu des données et téléchargement Excel directement dans le navigateur
 - **Rapport Excel multi-feuilles** : inventaire, firmware switches, firmware swarms, gateways, vue consolidée
 - **Calcul automatique de `firmware_max`** : détecte la version maximale disponible dans la même branche de version
 - **Multi-clients** : chaque client a sa propre configuration et ses propres tokens — aucun conflit possible
 - **Détection automatique des clients** : scan du dossier `.env/` sans configuration manuelle
-- **Rapports MRT** : accès aux rapports générés et programmés dans New Central via OAuth2 HPE SSO
+- **Création de rapports MRT** : planification de rapports dans New Central via OAuth2 HPE SSO, avec filtrage par site et récurrence
 - **Notifications email** : envoi optionnel du rapport par email via SMTP
 
 ---
@@ -63,7 +67,13 @@ pip install -r requirements.txt
 pip install arubacentral requests pandas openpyxl python-dotenv
 ```
 
-Pour les **rapports MRT**, des dépendances supplémentaires sont nécessaires :
+Pour l'**interface Streamlit** :
+
+```bash
+pip install streamlit
+```
+
+Pour les **rapports MRT** :
 
 ```bash
 pip install oauthlib requests-oauthlib
@@ -137,7 +147,80 @@ BASE_URL=https://apigw-eucentral3.central.arubanetworks.com
 
 ---
 
-## Utilisation
+## Interface web Streamlit
+
+L'interface Streamlit est le mode d'utilisation recommandé. Elle offre une expérience graphique dans le navigateur sans ligne de commande.
+
+### Lancement
+
+```bash
+streamlit run "Script Central/app.py"
+```
+
+Streamlit ouvre automatiquement l'application dans votre navigateur (par défaut : `http://localhost:8501`).
+
+### Page 1 — Firmware & Inventaire (`app.py`)
+
+La page principale permet de générer le rapport Excel complet.
+
+**Fonctionnement :**
+
+1. **Sélection du client** via un menu déroulant (clients auto-détectés depuis `.env/`)
+2. **Clic sur "Générer le rapport"** — la progression s'affiche en temps réel :
+   - Chargement de la configuration
+   - Connexion à Aruba Central
+   - Collecte des données (inventaire, switches, gateways, firmware…)
+   - Génération du fichier Excel en mémoire
+3. **Métriques résumées** : nombre de lignes par feuille (Firmware Consolidé, Inventaire, Switches, Gateways, Firmware Switch, Firmware Swarms)
+4. **Téléchargement direct** du fichier `.xlsx` nommé `<Client>_<date>.xlsx`
+5. **Aperçu des données** dans des onglets interactifs avec tableau paginable pour chaque feuille
+
+> Le rapport est généré en mémoire — aucun fichier n'est écrit sur le disque serveur.
+
+**Gestion des erreurs :** les erreurs d'authentification (401, identifiants incorrects) sont affichées directement dans l'interface avec les causes fréquentes et les actions correctives.
+
+---
+
+### Page 2 — Création de Rapport MRT (`pages/Rapport_MRT.py`)
+
+Accessible depuis la barre latérale, cette page permet de créer des rapports MRT planifiés directement dans New Central.
+
+**Formulaire en 6 étapes :**
+
+| Étape | Description |
+|---|---|
+| 1. Client | Sélection du client Aruba Central |
+| 2. Type | Type de rapport (Inventory, Client Session, RF Health, Network Usage…) |
+| 3. Période | Dernier jour / semaine / mois ou plage personnalisée |
+| 4. Planification | Une seule fois, quotidien, hebdomadaire ou mensuel (avec dates de début/fin) |
+| 5. Périmètre | Global, tous les sites, ou un site spécifique |
+| 6. Récapitulatif | Résumé de la configuration avant création |
+
+**Types de rapports disponibles :**
+
+| Clé API | Libellé |
+|---|---|
+| `inventory` | Inventory — Liste des équipements |
+| `clientInventory` | Client Inventory — Inventaire des clients |
+| `clientSession` | Client Session — Sessions clients |
+| `appAnalytics` | Application Analytics |
+| `deviceUptime` | Device Uptime |
+| `networkUsage` | Network Usage |
+| `resourceUtilization` | Resource Utilization |
+| `capacityPlanning` | Capacity Planning |
+| `rfHealth` | RF Health |
+| `custom` | Custom — Rapport personnalisé |
+
+**Périmètre :**
+- **Global** : un seul rapport global pour le tenant
+- **Tous les sites** : un rapport créé automatiquement pour chaque site (barre de progression)
+- **Site spécifique** : choix dans une liste chargée depuis l'API
+
+Une fois créé, le rapport apparaît dans l'interface Aruba Central (New Central) avec son ID et son nom.
+
+---
+
+## Utilisation en ligne de commande
 
 ### Rapport principal (inventaire + firmware)
 
@@ -284,8 +367,12 @@ Aruba-Central-API/
     │   ├── Client1.xlsx
     │   └── Client2.xlsx
     │
-    ├── main.py                         # Point d'entrée — rapport principal
-    ├── main_mrt.py                     # Point d'entrée — rapports MRT
+    ├── app.py                          # Interface Streamlit — page Firmware & Inventaire
+    ├── pages/
+    │   └── Rapport_MRT.py             # Interface Streamlit — page création MRT
+    │
+    ├── main.py                         # Point d'entrée CLI — rapport principal
+    ├── main_mrt.py                     # Point d'entrée CLI — rapports MRT
     │
     ├── central_config.py               # Chargement des configurations clients
     ├── clients_config.py               # Détection automatique des clients
@@ -309,8 +396,24 @@ Aruba-Central-API/
 
 ## Architecture technique
 
-### Flux d'exécution principal
+### Flux d'exécution
 
+**Mode Streamlit (recommandé)**
+```
+streamlit run app.py
+  │
+  ├── [Page 1] app.py
+  │     ├── clients_config / central_config  → Sélection client
+  │     ├── data_pipeline.py                 → Collecte des données
+  │     └── excel_export.export_to_excel_buffer()  → Excel en mémoire → téléchargement
+  │
+  └── [Page 2] pages/Rapport_MRT.py
+        ├── central_config               → Sélection client
+        ├── script_mrt_reports.lister_sites()       → API sites
+        └── script_mrt_reports.creer_rapport_programme()  → API New Central
+```
+
+**Mode CLI**
 ```
 main.py
   │
